@@ -59,18 +59,22 @@ public class ActionEventLog implements Closeable, ActionListener
 	@Override
 	public void actionPerformed(ActionEvent event)
 	{
-		long time = System.currentTimeMillis() - startTime;
+		long time = event.getWhen() - startTime;
 		String line = String.format("%d,%s\r\n", time, clean(event.getActionCommand()));
-		try
+		synchronized(log)
 		{
-			log.write(line);
-		}
-		catch (IOException e)
-		{
-			JOptionPane.showMessageDialog(null,
-					"Please inform the researcher that the program is unable to save the data to disk.",
-				    "Disk Write Failure",
-				    JOptionPane.ERROR_MESSAGE);
+			try
+			{
+				log.write(line);
+				log.flush();
+			}
+			catch (IOException e)
+			{
+				JOptionPane.showMessageDialog(null,
+						"Please inform the researcher that the program is unable to save the data to disk.",
+					    "Disk Write Failure",
+					    JOptionPane.ERROR_MESSAGE);
+			}
 		}
 	}
 }
