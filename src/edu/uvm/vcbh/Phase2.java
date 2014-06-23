@@ -1,8 +1,11 @@
 package edu.uvm.vcbh;
 
+import java.awt.CardLayout;
+import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
@@ -17,6 +20,8 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 public class Phase2 extends JFrame implements ActionListener
 {
@@ -25,11 +30,18 @@ public class Phase2 extends JFrame implements ActionListener
 	public static final String EXIT_CHALLENGE = "EXIT";
 	public static final int FIXED_SCHEDULE_SIZE = 10;
 	public static final long SESSION_TIME_MILLIS = 3 * 60 * 60 * 1000; // hours * min/hour * sec/min * millis/sec
+	public static final long REINFORCER_TIME_MILLIS = 3 * 60 * 1000; // minutes * sec/min * millis/sec
 	
+	protected Container mTrialPanel = null;
 	protected ActionEventLog mEventLog = null;
-	protected JLabel mTimerLabel = null;
+	protected JLabel mSessionTimerLabel = null;
 	protected JButton mButtonLeft = null;
 	protected JButton mButtonRight = null;
+
+	protected Container mReinforcerPanel = null;
+	protected JLabel mReinforcerInstructionLabel = null;
+	protected JLabel mReinforcerTimerLabel = null;
+	protected long mReinforcerEndTime = 0;
 
 	protected Timer mSessionTimer = null;
 	protected String mSessionID = null;
@@ -64,6 +76,7 @@ public class Phase2 extends JFrame implements ActionListener
 	                "Enter the label for left response:",
 	                "Left Response",
 	                JOptionPane.PLAIN_MESSAGE);
+			mResponseLeft = mResponseLeft.toUpperCase();
 			
 			if (null == mResponseLeft) // Indicates they pressed Cancel.
 				System.exit(0);
@@ -76,6 +89,7 @@ public class Phase2 extends JFrame implements ActionListener
 	                "Enter the label for right response:",
 	                "Right Response",
 	                JOptionPane.PLAIN_MESSAGE);
+			mResponseRight = mResponseRight.toUpperCase();
 			
 			if (null == mResponseRight) // Indicates they pressed Cancel.
 				System.exit(0);
@@ -109,65 +123,7 @@ public class Phase2 extends JFrame implements ActionListener
 				    JOptionPane.ERROR_MESSAGE);
 		}
 		
-		// Initialize Dialog
-		setLayout(new GridBagLayout());
-		GridBagConstraints constraints;
-		
-		mTimerLabel = new JLabel("03:00:00");
-		mTimerLabel.setFont(mTimerLabel.getFont().deriveFont(64.0f));
-		constraints = new GridBagConstraints();
-		constraints.gridx = 0;
-		constraints.gridy = 0;
-		constraints.gridwidth = 3;
-		constraints.weightx = 1.0;
-		constraints.weighty = 0.5;
-		constraints.anchor = GridBagConstraints.CENTER;
-		constraints.fill = GridBagConstraints.BOTH;
-		add(mTimerLabel, constraints);
-		
-		mButtonLeft = new JButton(mResponseLeft);
-		mButtonLeft.setFont(mButtonLeft.getFont().deriveFont(32.0f));
-		mButtonLeft.setActionCommand(mResponseLeft);
-		mButtonLeft.addActionListener(mEventLog);
-		mButtonLeft.addActionListener(this);
-		mButtonLeft.setEnabled(false);
-		constraints = new GridBagConstraints();
-		constraints.gridx = 0;
-		constraints.gridy = 1;
-		constraints.weightx = 0.4;
-		constraints.weighty = 0.5;
-		constraints.anchor = GridBagConstraints.SOUTHWEST;
-		constraints.fill = GridBagConstraints.BOTH;
-		add(mButtonLeft, constraints);
-		
-		JButton secretButton = new JButton("Ponies!");
-		secretButton.setVisible(false);
-		secretButton.setEnabled(false);
-		constraints = new GridBagConstraints();
-		constraints.gridx = 1;
-		constraints.gridy = 1;
-		constraints.weightx = 0.2;
-		constraints.weighty = 0.5;
-		constraints.anchor = GridBagConstraints.SOUTH;
-		constraints.fill = GridBagConstraints.BOTH;
-		add(secretButton, constraints);
-		
-		mButtonRight = new JButton(mResponseRight);
-		mButtonRight.setFont(mButtonRight.getFont().deriveFont(32.0f));
-		mButtonRight.setActionCommand(mResponseRight);
-		mButtonRight.addActionListener(mEventLog);
-		mButtonRight.addActionListener(this);
-		mButtonRight.setEnabled(false);
-		constraints = new GridBagConstraints();
-		constraints.gridx = 2;
-		constraints.gridy = 1;
-		constraints.weightx = 0.4;
-		constraints.weighty = 0.5;
-		constraints.anchor = GridBagConstraints.SOUTHEAST;
-		constraints.fill = GridBagConstraints.BOTH;
-		add(mButtonRight, constraints);
-		
-		pack();
+		initializeDialog();
 		
 		// Wait for signal to start trials
 		JOptionPane.showMessageDialog(this,
@@ -188,23 +144,133 @@ public class Phase2 extends JFrame implements ActionListener
 		startTrial();
 	}
 
+	protected void initializeDialog()
+	{
+		mTrialPanel = new JPanel();
+		setTitle(String.format("Phase 2: %s.%s.%s", mSessionID, mResponseLeft, mResponseRight));
+		mTrialPanel.setLayout(new GridBagLayout());
+		GridBagConstraints constraints;
+		
+		mSessionTimerLabel = new JLabel("03:00:00", SwingConstants.CENTER);
+		mSessionTimerLabel.setFont(mSessionTimerLabel.getFont().deriveFont(64.0f));
+		constraints = new GridBagConstraints();
+		constraints.gridx = 0;
+		constraints.gridy = 0;
+		constraints.gridwidth = GridBagConstraints.REMAINDER;
+		constraints.weightx = 1.0;
+		constraints.weighty = 0.01;
+		constraints.anchor = GridBagConstraints.CENTER;
+		constraints.fill = GridBagConstraints.BOTH;
+		mTrialPanel.add(mSessionTimerLabel, constraints);
+		
+		mButtonLeft = new JButton(mResponseLeft);
+		mButtonLeft.setFont(mButtonLeft.getFont().deriveFont(32.0f));
+		mButtonLeft.setActionCommand(mResponseLeft);
+		mButtonLeft.addActionListener(mEventLog);
+		mButtonLeft.addActionListener(this);
+		mButtonLeft.setEnabled(false);
+		constraints = new GridBagConstraints();
+		constraints.gridx = 0;
+		constraints.gridy = 1;
+		constraints.weightx = 0.4;
+		constraints.weighty = 0.5;
+		constraints.anchor = GridBagConstraints.SOUTHWEST;
+		constraints.fill = GridBagConstraints.BOTH;
+		mTrialPanel.add(mButtonLeft, constraints);
+		
+		JLabel emptySpace = new JLabel();
+		constraints = new GridBagConstraints();
+		constraints.gridx = 1;
+		constraints.gridy = 1;
+		constraints.weightx = 0.2;
+		constraints.weighty = 0.5;
+		constraints.anchor = GridBagConstraints.SOUTH;
+		constraints.fill = GridBagConstraints.BOTH;
+		mTrialPanel.add(emptySpace, constraints);
+		
+		mButtonRight = new JButton(mResponseRight);
+		mButtonRight.setFont(mButtonRight.getFont().deriveFont(32.0f));
+		mButtonRight.setActionCommand(mResponseRight);
+		mButtonRight.addActionListener(mEventLog);
+		mButtonRight.addActionListener(this);
+		mButtonRight.setEnabled(false);
+		constraints = new GridBagConstraints();
+		constraints.gridx = 2;
+		constraints.gridy = 1;
+		constraints.weightx = 0.4;
+		constraints.weighty = 0.5;
+		constraints.anchor = GridBagConstraints.SOUTHEAST;
+		constraints.fill = GridBagConstraints.BOTH;
+		mTrialPanel.add(mButtonRight, constraints);
+
+		// Set up the reinforcer panel
+		mReinforcerPanel = new JPanel();
+		mReinforcerPanel.setLayout(new GridBagLayout());
+		
+		mReinforcerTimerLabel = new JLabel("03:00", SwingConstants.CENTER);
+		mReinforcerTimerLabel.setFont(mSessionTimerLabel.getFont());
+		constraints = new GridBagConstraints();
+		constraints.gridx = 0;
+		constraints.gridy = 0;
+		constraints.gridwidth = GridBagConstraints.REMAINDER;
+		constraints.weightx = 1.0;
+		constraints.weighty = 0.01;
+		constraints.anchor = GridBagConstraints.CENTER;
+		constraints.fill = GridBagConstraints.BOTH;
+		mReinforcerPanel.add(mReinforcerTimerLabel, constraints);
+
+		mReinforcerInstructionLabel = new JLabel("Instructions go here...", SwingConstants.CENTER);
+		constraints = new GridBagConstraints();
+		constraints.gridx = 0;
+		constraints.gridy = 1;
+		constraints.gridwidth = GridBagConstraints.REMAINDER;
+		constraints.weightx = 1.0;
+		constraints.weighty = 0.5;
+		constraints.anchor = GridBagConstraints.CENTER;
+		constraints.fill = GridBagConstraints.BOTH;
+		mReinforcerPanel.add(mReinforcerInstructionLabel, constraints);
+		
+		// Add the two panels to a card layout for application
+		Container cp = this.getContentPane();
+		cp.setLayout(new CardLayout());
+		cp.add(mTrialPanel, "TRIAL");
+		cp.add(mReinforcerPanel, "REINFORCE");
+	}
+
 	protected void tick()
 	{
+		// First tick the session clock
 		long ms = mSessionEndTime - System.currentTimeMillis();
 		if (0 >= ms) ms = 0;
 		long s = (ms / 1000) % 60;
 		long m = (ms / (1000 * 60)) % 60;
 		long h = (ms / (1000 * 60 * 60));
-		mTimerLabel.setText(String.format("%02d:%02d:%02d", h, m, s));
+		mSessionTimerLabel.setText(String.format("%02d:%02d:%02d", h, m, s));
 		
+		// If the session is over...
 		if (0 >= ms)
-			endSession();		
+			endSession();
+		
+		// If we're not currently reinforcing, we're done.
+		if (0 >= mReinforcerEndTime)
+			return;
+		
+		// Tick the reinforcer timer.
+		ms = mReinforcerEndTime - System.currentTimeMillis();
+		if (0 >= ms) ms = 0;
+		s = (ms / 1000) % 60;
+		m = (ms / (1000 * 60)) % 60;
+		mReinforcerTimerLabel.setText(String.format("%02d:%02d", m, s));
+		
+		// If reinforcement is over, start the next trial.
+		if (0 >= ms)
+			startTrial();
 	}
 
 	protected void endSession()
 	{
 		mSessionTimer.cancel();
-		mEventLog.actionPerformed(new ActionEvent(this, 0, "END"));
+		mEventLog.actionPerformed(new ActionEvent(this, 0, "EXIT"));
 		try
 		{
 			mEventLog.close();
@@ -250,9 +316,8 @@ public class Phase2 extends JFrame implements ActionListener
 	public static void main(String[] args)
 	{
 		final Phase2 session = new Phase2();
-	    session.setTitle("Phase2 Session");
-	    session.setSize(300, 100);
-	    session.setLocation(300, 100);
+	    session.setSize(400, 200);
+	    session.setLocation(100, 100);
 
 	    session.addWindowListener(new WindowAdapter()
 	    {
@@ -282,8 +347,7 @@ public class Phase2 extends JFrame implements ActionListener
 
 	protected boolean isDone()
 	{
-		// TODO Auto-generated method stub
-		return false;
+		return System.currentTimeMillis() > mSessionEndTime;
 	}
 
 	@Override
@@ -319,12 +383,34 @@ public class Phase2 extends JFrame implements ActionListener
 
 	protected void reinforce(String reinforcer)
 	{
-		// TODO Auto-generated method stub
+		mReinforcerEndTime = System.currentTimeMillis() + REINFORCER_TIME_MILLIS;
+		mEventLog.actionPerformed(new ActionEvent(this, 0, String.format("TRIAL_%02d_END", mnTrials)));
+		mButtonLeft.setEnabled(false);
+		mButtonRight.setEnabled(false);
 		
+		mReinforcerInstructionLabel.setText(String.format("<html><center>Please follow the instructions for taking a puff from cigarette %s.<br>"
+				+ "The next trial will begin when the timer ends.</center></html>", reinforcer));
+		tick(); // Make sure the timer label is updated.
+
+		Container cp = getContentPane();
+		CardLayout cl = (CardLayout)cp.getLayout();
+		cl.show(cp, "REINFORCE");
 	}
 	
 	protected void startTrial()
 	{
+		mnTrials++;
+		mEventLog.actionPerformed(new ActionEvent(this, 0, String.format("TRIAL_%02d_START", mnTrials)));
+		mnResponsesLeft = 0;
+		mnResponsesRight = 0;
+		mReinforcerEndTime = 0;
 		
+		mButtonLeft.setEnabled(true);
+		mButtonRight.setEnabled(true);
+
+		Container cp = getContentPane();
+		CardLayout cl = (CardLayout)cp.getLayout();
+		cl.show(cp, "TRIAL");
+		Toolkit.getDefaultToolkit().beep();
 	}
 }
