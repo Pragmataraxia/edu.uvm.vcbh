@@ -11,6 +11,8 @@ import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -26,7 +28,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
-public class Phase2 extends JFrame implements ActionListener
+public class Phase2 extends JFrame implements ActionListener, KeyListener
 {
 	private static final long serialVersionUID = 5773182870388558703L;
 
@@ -123,6 +125,8 @@ public class Phase2 extends JFrame implements ActionListener
 		}
 
 		initializeDialog();
+		
+		addKeyListener(this);
 
 		// Wait for signal to start trials
 		JOptionPane.showMessageDialog(this, "Press OK to begin session", "Begin Session", JOptionPane.PLAIN_MESSAGE);
@@ -432,4 +436,23 @@ public class Phase2 extends JFrame implements ActionListener
 		GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0];
 		device.setFullScreenWindow(bOn ? this : null);
 	}
+
+	@Override
+	public void keyPressed(KeyEvent e)
+	{
+		if (KeyEvent.VK_CONTROL != e.getKeyCode())
+			return;
+		
+		if (KeyEvent.KEY_LOCATION_LEFT == e.getKeyLocation())
+			mButtonLeft.doClick();
+		
+		if (KeyEvent.KEY_LOCATION_RIGHT == e.getKeyLocation())
+			mButtonRight.doClick();
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e){}
+
+	@Override
+	public void keyTyped(KeyEvent e){}
 }
