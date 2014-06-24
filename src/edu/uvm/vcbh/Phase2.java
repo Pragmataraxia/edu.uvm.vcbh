@@ -34,18 +34,8 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 
 	public static final String EXIT_CHALLENGE = "EXIT";
 	public static final int FIXED_SCHEDULE_SIZE = 10;
-	public static final long SESSION_TIME_MILLIS = 3 * 60 * 60 * 1000; // hours
-																		// *
-																		// min/hour
-																		// *
-																		// sec/min
-																		// *
-																		// millis/sec
-	public static final long REINFORCER_TIME_MILLIS = 3 * 60 * 1000; // minutes
-																		// *
-																		// sec/min
-																		// *
-																		// millis/sec
+	public static final long SESSION_TIME_MILLIS = 3 * 60 * 60 * 1000; // hours * min/hour * sec/min * millis/sec
+	public static final long REINFORCER_TIME_MILLIS = 3 * 60 * 1000;   // minutes * sec/min * millis/sec
 
 	protected Container mTrialPanel = null;
 	protected ActionEventLog mEventLog = null;
@@ -173,12 +163,7 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 		mButtonLeft.setFont(mButtonLeft.getFont().deriveFont(64.0f));
 		mButtonLeft.setFocusable(false);
 		mButtonLeft.setActionCommand(mResponseLeft);
-		// ActionListeners are called back in the opposite order they were
-		// added.
-		// So, to keep actions appearing in the correct order in the log, add
-		// the log last.
 		mButtonLeft.addActionListener(this);
-		mButtonLeft.addActionListener(mEventLog);
 		mButtonLeft.setEnabled(false);
 		constraints = new GridBagConstraints();
 		constraints.gridx = 0;
@@ -204,12 +189,7 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 		mButtonRight.setFont(mButtonRight.getFont().deriveFont(64.0f));
 		mButtonRight.setFocusable(false);
 		mButtonRight.setActionCommand(mResponseRight);
-		// ActionListeners are called back in the opposite order they were
-		// added.
-		// So, to keep actions appearing in the correct order in the log, add
-		// the log last.
 		mButtonRight.addActionListener(this);
-		mButtonRight.addActionListener(mEventLog);
 		mButtonRight.setEnabled(false);
 		constraints = new GridBagConstraints();
 		constraints.gridx = 2;
@@ -365,42 +345,33 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
+		mEventLog.actionPerformed(e);
 		if (e.getSource() == mButtonLeft)
 		{
-			responseLeft();
+			if (FIXED_SCHEDULE_SIZE > ++mnResponsesLeft)
+				return;
+
+			mnReinforcementsLeft++;
+			reinforce(e);
 		}
 		else if (e.getSource() == mButtonRight)
 		{
-			responseRight();
+			if (FIXED_SCHEDULE_SIZE > ++mnResponsesRight)
+				return;
+
+			mnReinforcementsRight++;
+			reinforce(e);
 		}
 	}
 
-	protected void responseLeft()
+	protected void reinforce(ActionEvent e)
 	{
-		if (FIXED_SCHEDULE_SIZE > ++mnResponsesLeft)
-			return;
-
-		mnReinforcementsLeft++;
-		reinforce(mResponseLeft);
-	}
-
-	protected void responseRight()
-	{
-		if (FIXED_SCHEDULE_SIZE > ++mnResponsesRight)
-			return;
-
-		mnReinforcementsRight++;
-		reinforce(mResponseRight);
-	}
-
-	protected void reinforce(String reinforcer)
-	{
-		mReinforcerEndTime = System.currentTimeMillis() + REINFORCER_TIME_MILLIS;
-		mEventLog.actionPerformed(new ActionEvent(this, 0, String.format("TRIAL_%02d_END", mnTrials), System.currentTimeMillis(), 0));
+		mReinforcerEndTime = e.getWhen() + REINFORCER_TIME_MILLIS;
+		mEventLog.actionPerformed(new ActionEvent(this, 0, String.format("TRIAL_%02d_END", mnTrials), e.getWhen(), 0));
 		mButtonLeft.setEnabled(false);
 		mButtonRight.setEnabled(false);
 
-		mReinforcerInstructionLabel.setText(String.format("<html><center>Please follow the instructions for taking a puff from cigarette %s.<br>" + "The next trial will begin when the timer ends.</center></html>", reinforcer));
+		mReinforcerInstructionLabel.setText(String.format("<html><center>Please follow the instructions for taking a puff from cigarette %s.<br>" + "The next trial will begin when the timer ends.</center></html>", e.getActionCommand()));
 		tick(); // Make sure the timer label is updated.
 
 		Container cp = getContentPane();
