@@ -2,10 +2,7 @@ package edu.uvm.vcbh;
 
 import java.awt.CardLayout;
 import java.awt.Container;
-import java.awt.Desktop;
 import java.awt.Dimension;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Toolkit;
@@ -16,10 +13,14 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Timer;
 import java.util.TimerTask;
+
+//import java.net.URI;
+//import java.net.URISyntaxException;
+//import java.awt.GraphicsDevice;
+//import java.awt.GraphicsEnvironment;
+//import java.awt.Desktop;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -34,8 +35,8 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 
 	public static final String EXIT_CHALLENGE = "EXIT";
 	public static final int FIXED_SCHEDULE_SIZE = 10;
-	public static final long SESSION_TIME_MILLIS = 3 * 60 * 60 * 1000; // hours * min/hour * sec/min * millis/sec
-	public static final long REINFORCER_TIME_MILLIS = 3 * 60 * 1000;   // minutes * sec/min * millis/sec
+	public static final long SESSION_TIME_MILLIS = (long)(3 * 60 * 60 * 1000); // hours * min/hour * sec/min * millis/sec
+	public static final long REINFORCER_TIME_MILLIS = (long)(3 * 60 * 1000);   // minutes * sec/min * millis/sec
 
 	protected Container mTrialPanel = null;
 	protected ActionEventLog mEventLog = null;
@@ -62,6 +63,7 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 
 	public Phase2()
 	{
+		this.setTitle("Phase 2");
 	}
 
 	protected boolean startSession()
@@ -77,19 +79,19 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 		while (!isValidResponse(mResponseLeft))
 		{
 			mResponseLeft = (String) JOptionPane.showInputDialog(this, "Enter the label for left response:", "Left Response", JOptionPane.PLAIN_MESSAGE);
-			mResponseLeft = mResponseLeft.toUpperCase();
-
 			if (null == mResponseLeft) // Indicates they pressed Cancel.
 				return false;
+			
+			mResponseLeft = mResponseLeft.toUpperCase();
 		}
 
 		while (!isValidResponse(mResponseRight) || 0 == mResponseLeft.compareTo(mResponseRight))
 		{
 			mResponseRight = (String) JOptionPane.showInputDialog(this, "Enter the label for right response:", "Right Response", JOptionPane.PLAIN_MESSAGE);
-			mResponseRight = mResponseRight.toUpperCase();
-
 			if (null == mResponseRight) // Indicates they pressed Cancel.
 				return false;
+			
+			mResponseRight = mResponseRight.toUpperCase();
 		}
 
 		try
@@ -105,14 +107,14 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 		JOptionPane.showMessageDialog(this, "Press OK after resetting the time on the CReSS", "CReSS Synchronization", JOptionPane.PLAIN_MESSAGE);
 		mEventLog.restart();
 
-		try
-		{
-			Desktop.getDesktop().browse(new URI("http://vcbh.uvm.edu/Phase2Instructions.html"));
-		}
-		catch (IOException | URISyntaxException e1)
-		{
-			JOptionPane.showMessageDialog(this, "Failed to open a browser window to display the participant instructions!", "Failed to Open Browser", JOptionPane.ERROR_MESSAGE);
-		}
+//		try
+//		{
+//			Desktop.getDesktop().browse(new URI("http://vcbh.uvm.edu/Phase2Instructions.html"));
+//		}
+//		catch (IOException | URISyntaxException e1)
+//		{
+//			JOptionPane.showMessageDialog(this, "Failed to open a browser window to display the participant instructions!", "Failed to Open Browser", JOptionPane.ERROR_MESSAGE);
+//		}
 
 		initializeDialog();
 		
@@ -398,14 +400,17 @@ public class Phase2 extends JFrame implements ActionListener, KeyListener
 
 	public void setFullscreen(boolean bOn)
 	{
-		try
-		{
-			setUndecorated(bOn);
-		}
-		catch (Exception e)
-		{}
-		GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0];
-		device.setFullScreenWindow(bOn ? this : null);
+//		try
+//		{
+//			setUndecorated(bOn);
+//		}
+//		catch (Exception e)
+//		{}
+//		GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0];
+//		device.setFullScreenWindow(bOn ? this : null);
+		
+		setVisible(true);
+		setExtendedState(bOn ? JFrame.MAXIMIZED_BOTH : JFrame.NORMAL);
 	}
 
 	@Override
