@@ -10,6 +10,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -27,15 +29,20 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
-public abstract class ConcurrentChoiceExperiment extends JFrame implements ActionListener, KeyListener
+public class ConcurrentChoiceExperiment extends JFrame implements ActionListener, KeyListener
 {
 	private static final long serialVersionUID = 4758559233406217497L;
 	
 	public static final int FIXED_SCHEDULE_SIZE = 10;
+	protected static final int[] PROGRESSIVE_SCHEDULE_COSTS = { 160, 320, 640, 1280, 2400 };
+	protected static final int PROGRESSIVE_SCHEDULE_INCREMENT = 1200;
 
 	public static final String EXIT_CHALLENGE = "EXIT";
 	public static final long SESSION_TIME_MILLIS = (long)(3 * 60 * 60 * 1000); // hours * min/hour * sec/min * millis/sec
 	public static final long REINFORCER_TIME_MILLIS = (long)(3 * 60 * 1000);   // minutes * sec/min * millis/sec
+	
+	public enum ProgressiveInput { NONE, LEFT, RIGHT };
+	protected ProgressiveInput mProgressive = ProgressiveInput.NONE;
 
 	protected Container mTrialPanel = null;
 	protected ActionEventLog mEventLog = null;
@@ -60,7 +67,10 @@ public abstract class ConcurrentChoiceExperiment extends JFrame implements Actio
 	protected int mnReinforcementsRight = 0;
 	protected int mnTrials = 0;
 
-	public ConcurrentChoiceExperiment(){}
+	public ConcurrentChoiceExperiment()
+	{
+		this.setTitle("Concurrent Choice Experiment");
+	}
 
 	protected boolean startSession()
 	{
@@ -69,7 +79,7 @@ public abstract class ConcurrentChoiceExperiment extends JFrame implements Actio
 
 		try
 		{
-			mEventLog = new ActionEventLog(String.format("%s.%s.%s", mSessionID, mResponseLeft, mResponseRight));
+			mEventLog = new ActionEventLog(getTitle());
 		}
 		catch (IOException e)
 		{
@@ -140,6 +150,20 @@ public abstract class ConcurrentChoiceExperiment extends JFrame implements Actio
 			mResponseRight = mResponseRight.toUpperCase();
 		}
 		
+		String progressiveOptions[] = { "None", mResponseLeft, mResponseRight };
+		int response = JOptionPane.showOptionDialog(this, "Which input has the progressive schedule?", "Progressive Schedule", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, progressiveOptions, null);
+		if (JOptionPane.CLOSED_OPTION == response)
+			return false;
+		
+		if (1 == response)
+			mProgressive = ProgressiveInput.LEFT;
+		else if (2 == response)
+			mProgressive = ProgressiveInput.RIGHT;
+
+		String left = ProgressiveInput.LEFT == mProgressive ? mResponseLeft : mResponseLeft.toLowerCase();
+		String right = ProgressiveInput.RIGHT == mProgressive ? mResponseRight : mResponseRight.toLowerCase();
+		setTitle(String.format("%s.%s.%s", mSessionID, left, right));
+		
 		return true;
 	}
 
@@ -148,7 +172,6 @@ public abstract class ConcurrentChoiceExperiment extends JFrame implements Actio
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
 		mTrialPanel = new JPanel();
-		setTitle(String.format("Phase 2: %s.%s.%s", mSessionID, mResponseLeft, mResponseRight));
 		mTrialPanel.setLayout(new GridBagLayout());
 		GridBagConstraints constraints;
 
@@ -342,8 +365,31 @@ public abstract class ConcurrentChoiceExperiment extends JFrame implements Actio
 		}
 	}
 	
-	protected abstract int requiredResponsesLeft();
-	protected abstract int requiredResponsesRight();
+	protected int requiredResponsesProgressive(int nReinforcers)
+	{
+		int n = nReinforcers;
+		int r = 0;
+		int nLinear = 1 + n - PROGRESSIVE_SCHEDULE_COSTS.length;
+		
+		if (0 < nLinear)
+		{
+			n = PROGRESSIVE_SCHEDULE_COSTS.length - 1;
+			r = nLinear * PROGRESSIVE_SCHEDULE_INCREMENT;
+		}
+		
+		r += PROGRESSIVE_SCHEDULE_COSTS[n];
+		return r;
+	}
+
+	protected int requiredResponsesLeft()
+	{
+		return ProgressiveInput.LEFT == mProgressive ? requiredResponsesProgressive(mnReinforcementsLeft) : FIXED_SCHEDULE_SIZE;
+	}
+
+	protected int requiredResponsesRight()
+	{
+		return ProgressiveInput.RIGHT == mProgressive ? requiredResponsesProgressive(mnReinforcementsRight) : FIXED_SCHEDULE_SIZE;
+	}
 
 	protected void reinforce(ActionEvent e)
 	{
@@ -410,4 +456,32 @@ public abstract class ConcurrentChoiceExperiment extends JFrame implements Actio
 
 	@Override
 	public void keyTyped(KeyEvent e){}
+
+	public static void main(String[] args)
+	{
+		final ConcurrentChoiceExperiment session = new ConcurrentChoiceExperiment();
+		session.setFullscreen(true);
+		if (!session.startSession())
+			System.exit(0);
+
+		session.addWindowListener(new WindowAdapter()
+		{
+			@Override
+			public void windowClosing(WindowEvent e)
+			{
+				if (!session.isDone())
+				{
+					String response = (String) JOptionPane.showInputDialog(null, String.format("Type \"%s\" to terminate the session:", EXIT_CHALLENGE), "Terminate Session", JOptionPane.PLAIN_MESSAGE);
+
+					if (null == response || 0 != response.compareToIgnoreCase(EXIT_CHALLENGE))
+						return;
+				}
+				session.endSession();
+				session.setVisible(false);
+				session.dispose();
+			}
+		});
+
+		session.setVisible(true);
+	}
 }

@@ -3,12 +3,12 @@
     <!--this file was created by Eclipse Runnable JAR Export Wizard-->
     <!--ANT 1.7 is required                                        -->
     <target name="create_run_jar">
-        <jar destfile="Phase2.jar" filesetmanifest="mergewithoutmain">
+        <jar destfile="ConcurrentChoice.jar" filesetmanifest="mergewithoutmain">
             <manifest>
-                <attribute name="Main-Class" value="edu.uvm.vcbh.Phase2"/>
+                <attribute name="Main-Class" value="edu.uvm.vcbh.ConcurrentChoiceExperiment"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
-            <fileset dir="."/>
+            <fileset dir="bin"/>
         </jar>
     </target>
 </project>
