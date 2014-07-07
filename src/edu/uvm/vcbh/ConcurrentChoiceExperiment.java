@@ -21,6 +21,7 @@ import java.util.TimerTask;
 //import java.awt.GraphicsDevice;
 //import java.awt.GraphicsEnvironment;
 //import java.awt.Desktop;
+//import javax.swing.JTextArea;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -34,7 +35,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 	private static final long serialVersionUID = 4758559233406217497L;
 	
 	public static final int FIXED_SCHEDULE_SIZE = 10;
-	protected static final int[] PROGRESSIVE_SCHEDULE_COSTS = { 160, 320, 640, 1280, 2400 };
+	protected static final int[] PROGRESSIVE_SCHEDULE_COSTS = { 10, 160, 320, 640, 1280, 2400 };
 	protected static final int PROGRESSIVE_SCHEDULE_INCREMENT = 1200;
 
 	public static final String EXIT_CHALLENGE = "EXIT";
@@ -66,6 +67,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 	protected int mnReinforcementsLeft = 0;
 	protected int mnReinforcementsRight = 0;
 	protected int mnTrials = 0;
+	protected int mnMaxRewardedResponses = 0;
 
 	public ConcurrentChoiceExperiment()
 	{
@@ -124,41 +126,86 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 
 	protected boolean gatherParams()
 	{
-		while (!isValidSession(mSessionID))
+		boolean bCorrect = false;
+		while (!bCorrect)
 		{
-			mSessionID = (String) JOptionPane.showInputDialog(this, "Enter a valid session ID:", "New Session", JOptionPane.PLAIN_MESSAGE);
+			mSessionID = null;
+			while (!isValidSession(mSessionID))
+			{
+				mSessionID = (String) JOptionPane.showInputDialog(this, "Enter a valid session ID:", "New Session", JOptionPane.PLAIN_MESSAGE);
 
-			if (null == mSessionID) // Indicates they pressed Cancel.
-				return false;
-		}
+				if (null == mSessionID) // Indicates they pressed Cancel.
+					return false;
+			}
 
-		while (!isValidResponse(mResponseLeft))
-		{
-			mResponseLeft = (String) JOptionPane.showInputDialog(this, "Enter the label for left response:", "Left Response", JOptionPane.PLAIN_MESSAGE);
-			if (null == mResponseLeft) // Indicates they pressed Cancel.
-				return false;
+			mResponseLeft = null;
+			while (!isValidResponse(mResponseLeft))
+			{
+				mResponseLeft = (String) JOptionPane.showInputDialog(this, "Enter the label for left response:", "Left Response", JOptionPane.PLAIN_MESSAGE);
+				if (null == mResponseLeft) // Indicates they pressed Cancel.
+					return false;
+				
+				mResponseLeft = mResponseLeft.toUpperCase();
+			}
+
+			mResponseRight = null;
+			while (!isValidResponse(mResponseRight) || 0 == mResponseLeft.compareTo(mResponseRight))
+			{
+				mResponseRight = (String) JOptionPane.showInputDialog(this, "Enter the label for right response:", "Right Response", JOptionPane.PLAIN_MESSAGE);
+				if (null == mResponseRight) // Indicates they pressed Cancel.
+					return false;
+				
+				mResponseRight = mResponseRight.toUpperCase();
+			}
+
+			mProgressive = ProgressiveInput.NONE;
+			{
+				String progressiveOptions[] = { "None", mResponseLeft, mResponseRight };
+				int response = JOptionPane.showOptionDialog(this, "Which input has the progressive schedule?", "Progressive Schedule", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, progressiveOptions, null);
+				if (JOptionPane.CLOSED_OPTION == response)
+					return false;
+
+				if (1 == response)
+					mProgressive = ProgressiveInput.LEFT;
+				else if (2 == response)
+					mProgressive = ProgressiveInput.RIGHT;
+			}
 			
-			mResponseLeft = mResponseLeft.toUpperCase();
-		}
-
-		while (!isValidResponse(mResponseRight) || 0 == mResponseLeft.compareTo(mResponseRight))
-		{
-			mResponseRight = (String) JOptionPane.showInputDialog(this, "Enter the label for right response:", "Right Response", JOptionPane.PLAIN_MESSAGE);
-			if (null == mResponseRight) // Indicates they pressed Cancel.
-				return false;
+			// Verify settings...
+			String prog = "ERROR";
+			switch(mProgressive)
+			{
+			case LEFT:
+				prog = mResponseLeft;
+				break;
+			case RIGHT:
+				prog = mResponseRight;
+				break;
+			case NONE:
+			default:
+				prog = "None";
+				break;
+			}
 			
-			mResponseRight = mResponseRight.toUpperCase();
+			// Using HTML to support presenting the data in a table...
+			String confirm = String.format("<html>Are the following settings correct?<br>"
+					+ "<table style=\"width:200px\">"
+					+ "<tr><td>Session ID</td><td>%s</td></tr>"
+					+ "<tr><td>Left Choice</td><td>%s</td></tr>"
+					+ "<tr><td>Right Choice</td><td>%s</td></tr>"
+					+ "<tr><td>Progressive</td><td>%s</td></tr>"
+					+ "</html>", mSessionID, mResponseLeft, mResponseRight, prog);
+			
+			// Or, using a JTextArea so that it can have tabs.
+//			JTextArea confirm = new JTextArea(String.format("Are the following settings correct?\n\n"
+//					+ "Session ID:\t%s\n"
+//					+ "Left Choice:\t%s\n"
+//					+ "Right Choice:\t%s\n"
+//					+ "Progressive:\t%s", mSessionID, mResponseLeft, mResponseRight, prog));
+//			confirm.setOpaque(false);
+			
+			bCorrect = JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(this, confirm, "Verification", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null);
 		}
-		
-		String progressiveOptions[] = { "None", mResponseLeft, mResponseRight };
-		int response = JOptionPane.showOptionDialog(this, "Which input has the progressive schedule?", "Progressive Schedule", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, progressiveOptions, null);
-		if (JOptionPane.CLOSED_OPTION == response)
-			return false;
-		
-		if (1 == response)
-			mProgressive = ProgressiveInput.LEFT;
-		else if (2 == response)
-			mProgressive = ProgressiveInput.RIGHT;
 
 		String left = ProgressiveInput.LEFT == mProgressive ? mResponseLeft : mResponseLeft.toLowerCase();
 		String right = ProgressiveInput.RIGHT == mProgressive ? mResponseRight : mResponseRight.toLowerCase();
@@ -275,25 +322,26 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 		long h = (ms / (1000 * 60 * 60));
 		mSessionTimerLabel.setText(String.format("%02d:%02d:%02d", h, m, s));
 
-		// If the session is over...
-		if (0 >= ms)
-			endSession();
 
-		// If we're not currently reinforcing, we're done.
-		if (0 >= mReinforcerEndTime)
-			return;
+		if (0 >= mReinforcerEndTime) // If we are not currently reinforcing...
+		{
+			if (0 >= ms) // If the session timer has expired...
+				endSession();
+		}
+		else
+		{
+			// Tick the reinforcer timer.
+			ms = mReinforcerEndTime - System.currentTimeMillis();
+			if (0 >= ms)
+				ms = 0;
+			s = (ms / 1000) % 60;
+			m = (ms / (1000 * 60)) % 60;
+			mReinforcerTimerLabel.setText(String.format("%02d:%02d", m, s));
 
-		// Tick the reinforcer timer.
-		ms = mReinforcerEndTime - System.currentTimeMillis();
-		if (0 >= ms)
-			ms = 0;
-		s = (ms / 1000) % 60;
-		m = (ms / (1000 * 60)) % 60;
-		mReinforcerTimerLabel.setText(String.format("%02d:%02d", m, s));
-
-		// If reinforcement is over, start the next trial.
-		if (0 >= ms && !isDone())
-			startTrial();
+			// If reinforcement is over, start the next trial.
+			if (0 >= ms)
+				startTrial();
+		}
 	}
 
 	protected void endSession()
@@ -308,8 +356,20 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 		{} // Honestly, what am I going to do with an exception now?
 		mButtonLeft.setEnabled(false);
 		mButtonRight.setEnabled(false);
-		JOptionPane.showMessageDialog(this, "Your session is complete; please inform your session coordinator.\n" + "Thank you for your help in our research!\n\n" + String.format("%s: %d, %s: %d", mResponseLeft, mnReinforcementsLeft, mResponseRight, mnReinforcementsRight), "Session Complete", JOptionPane.PLAIN_MESSAGE);
+		
+		JOptionPane.showMessageDialog(this, "Your session is complete; please inform your session coordinator.\n" + "Thank you for your help in our research!", "Session Complete", JOptionPane.PLAIN_MESSAGE);
+
+		String summary = String.format("<html><table style=\"width:300px\">"
+				+ "<tr><td>%s Earned</td><td>%d</td>"
+				+ "<tr><td>%s Earned</td><td>%d</td>", mResponseLeft, mnReinforcementsLeft, mResponseRight, mnReinforcementsRight);
+		if (ProgressiveInput.NONE != mProgressive)
+			summary += String.format("<tr><td>Highest PR completed</td><td>%d</td>", mnMaxRewardedResponses);
+		summary += "</table></html>";
+		JOptionPane.showMessageDialog(this, summary, "Session Summary", JOptionPane.PLAIN_MESSAGE);
+		
 		setFullscreen(false);
+		setVisible(false);
+		dispose();
 	}
 
 	protected static boolean isValidSession(String sessionID)
@@ -353,6 +413,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 				return;
 
 			mnReinforcementsLeft++;
+			mnMaxRewardedResponses = Math.max(mnMaxRewardedResponses, mnResponsesLeft);
 			reinforce(e);
 		}
 		else if (e.getSource() == mButtonRight)
@@ -361,6 +422,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 				return;
 
 			mnReinforcementsRight++;
+			mnMaxRewardedResponses = Math.max(mnMaxRewardedResponses, mnResponsesRight);
 			reinforce(e);
 		}
 	}
@@ -408,6 +470,12 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 
 	protected void startTrial()
 	{
+		if (isDone())
+		{
+			endSession();
+			return;
+		}
+		
 		mnTrials++;
 		mEventLog.actionPerformed(new ActionEvent(this, 0, String.format("TRIAL_%02d_START", mnTrials), System.currentTimeMillis(), 0));
 		mnResponsesLeft = 0;
@@ -424,17 +492,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 	}
 
 	public void setFullscreen(boolean bOn)
-	{
-//		try
-//		{
-//			setUndecorated(bOn);
-//		}
-//		catch (Exception e)
-//		{}
-//		GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0];
-//		device.setFullScreenWindow(bOn ? this : null);
-		
-		setVisible(true);
+	{		
 		setExtendedState(bOn ? JFrame.MAXIMIZED_BOTH : JFrame.NORMAL);
 	}
 
@@ -461,6 +519,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 	{
 		final ConcurrentChoiceExperiment session = new ConcurrentChoiceExperiment();
 		session.setFullscreen(true);
+		session.setVisible(true);
 		if (!session.startSession())
 			System.exit(0);
 
@@ -476,9 +535,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 					if (null == response || 0 != response.compareToIgnoreCase(EXIT_CHALLENGE))
 						return;
 				}
-				session.endSession();
-				session.setVisible(false);
-				session.dispose();
+				session.endSession(); 
 			}
 		});
 
