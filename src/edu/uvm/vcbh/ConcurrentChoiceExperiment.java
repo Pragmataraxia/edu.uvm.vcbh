@@ -12,6 +12,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -22,6 +25,9 @@ import java.util.TimerTask;
 //import java.awt.GraphicsEnvironment;
 //import java.awt.Desktop;
 //import javax.swing.JTextArea;
+
+
+
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -39,6 +45,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 	protected static final int PROGRESSIVE_SCHEDULE_INCREMENT = 1200;
 
 	public static final String EXIT_CHALLENGE = "EXIT";
+	public static final String SUMMARY_FILENAME = "sessions.csv";
 	public static final long SESSION_TIME_MILLIS = (long)(3 * 60 * 60 * 1000); // hours * min/hour * sec/min * millis/sec
 	public static final long REINFORCER_TIME_MILLIS = (long)(3 * 60 * 1000);   // minutes * sec/min * millis/sec
 	
@@ -358,6 +365,15 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 		mButtonRight.setEnabled(false);
 		
 		JOptionPane.showMessageDialog(this, "Your session is complete; please inform your session coordinator.\n" + "Thank you for your help in our research!", "Session Complete", JOptionPane.PLAIN_MESSAGE);
+		
+		try (BufferedWriter summaryFile = new BufferedWriter(new FileWriter(new File(SUMMARY_FILENAME), true)))
+		{
+			summaryFile.write(String.format("%s\t%d\t%d\t%d\r\n", getTitle(), mnReinforcementsLeft, mnReinforcementsRight, mnMaxRewardedResponses));
+		}
+		catch (IOException e)
+		{
+			JOptionPane.showMessageDialog(this, "Failed to write summary to disk, please pay attention to following dialog...", "Disk Write Error", JOptionPane.PLAIN_MESSAGE);
+		}
 
 		String summary = String.format("<html><table style=\"width:300px\">"
 				+ "<tr><td>%s Earned</td><td>%d</td>"
