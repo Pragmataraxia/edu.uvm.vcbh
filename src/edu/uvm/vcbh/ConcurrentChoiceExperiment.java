@@ -476,7 +476,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 		mButtonLeft.setEnabled(false);
 		mButtonRight.setEnabled(false);
 
-		mReinforcerInstructionLabel.setText(String.format("<html><center>Please follow the instructions for taking a puff from cigarette %s.<br>" + "The next trial will begin when the timer ends.</center></html>", e.getActionCommand()));
+		mReinforcerInstructionLabel.setText(String.format("<html><center>Please follow the instructions for taking 2 puffs from cigarette %s.<br>" + "The next trial will begin when the timer ends.</center></html>", e.getActionCommand()));
 		tick(); // Make sure the timer label is updated.
 
 		Container cp = getContentPane();
