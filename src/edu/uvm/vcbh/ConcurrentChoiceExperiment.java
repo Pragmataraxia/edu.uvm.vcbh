@@ -368,7 +368,7 @@ public class ConcurrentChoiceExperiment extends JFrame implements ActionListener
 		
 		try (BufferedWriter summaryFile = new BufferedWriter(new FileWriter(new File(SUMMARY_FILENAME), true)))
 		{
-			summaryFile.write(String.format("%s\t%d\t%d\t%d\r\n", getTitle(), mnReinforcementsLeft, mnReinforcementsRight, mnMaxRewardedResponses));
+			summaryFile.write(String.format("%s,%d,%d,%d\r\n", getTitle(), mnReinforcementsLeft, mnReinforcementsRight, mnMaxRewardedResponses));
 		}
 		catch (IOException e)
 		{
